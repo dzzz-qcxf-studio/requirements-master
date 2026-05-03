@@ -56,24 +56,42 @@ function parseAnalysis(text) {
 
 /**
  * 解析第 2 轮质疑输出，提取需要用户确认的问题
+ * 支持两种格式：
+ *   简单格式: "- DS18B20 和 DHT11 你更倾向哪个？"
+ *   结构化格式: "- 传感器选型: DS18B20(精度高，只测温度) / DHT11(温湿度一体) / DHT22(高精度温湿度)"
+ *
  * @param {string} text - AI 输出的问题列表
- * @returns {Array} 问题列表
+ * @returns {Array} 问题列表，每项为 { question, options?, header? }
  */
 function parseQuestions(text) {
   const questions = [];
 
-  // 匹配以 - 或 * 开头的问题行
   const lines = text.split('\n');
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.match(/^[-*]\s+.+/) && !trimmed.includes('无重大')) {
-      questions.push(trimmed.replace(/^[-*]\s+/, ''));
+    if (!trimmed.match(/^[-*]\s+.+/) || trimmed.includes('无重大')) continue;
+
+    const content = trimmed.replace(/^[-*]\s+/, '');
+
+    // 尝试解析结构化格式: "问题: 选项1(说明) / 选项2(说明)"
+    const colonMatch = content.match(/^(.+?)[:：]\s*(.+)/);
+    if (colonMatch && colonMatch[2].includes('/')) {
+      const question = colonMatch[1].trim();
+      const optionParts = colonMatch[2].split('/').map(s => s.trim());
+      const options = optionParts.map(opt => {
+        const m = opt.match(/^(.+?)\((.+?)\)$/);
+        return m
+          ? { label: m[1].trim(), description: m[2].trim() }
+          : { label: opt, description: opt };
+      });
+      questions.push({ question, options, header: question.slice(0, 8) });
+    } else {
+      questions.push({ question: content });
     }
   }
 
-  // 如果没找到具体问题，返回默认确认问题
   if (questions.length === 0) {
-    questions.push('以上分析是否准确？是否需要调整模块选型？');
+    questions.push({ question: '以上分析是否准确？是否需要调整模块选型？' });
   }
 
   return questions;

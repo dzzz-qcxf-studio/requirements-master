@@ -58,16 +58,57 @@ DS18B20 数据线接 PA0，需要 4.7K 上拉电阻
    - 环境因素、成本
 3. 调用 `parseQuestions(questionText)` 提取需要用户确认的问题列表
 
-### Step 3: 向用户提问（2-3 个关键问题）
+### Step 3: 向用户提问（使用 AskUserQuestion 工具）
 
-基于第 2 轮推理结果，**只问最有歧义的、影响硬件选型的问题**。格式：
+基于第 2 轮推理结果，**只问最有歧义的、影响硬件选型的问题**（2-3 个）。
 
-"我分析了你的需求，有几个关键问题需要确认：
-1. DS18B20 和 DHT11 你更倾向哪个？DS18B20 精度更高但只测温度
-2. 蜂鸣器用有源还是无源？有源直接响，无源需要 PWM 驱动
-3. 供电用 USB 5V 还是电池？会影响电源方案"
+**必须使用 `AskUserQuestion` 工具**，将每个问题转化为可选项。每个问题提供 2-4 个选项，选项应包含具体模块型号和关键差异说明。
 
-**等待用户回答后继续。**
+示例调用：
+
+```
+AskUserQuestion({
+  questions: [
+    {
+      question: "温度传感器选哪个？",
+      header: "传感器",
+      options: [
+        { label: "DS18B20", description: "单总线，精度 ±0.5°C，只测温度，需 4.7K 上拉" },
+        { label: "DHT11", description: "单总线，精度 ±2°C，同时测温湿度" },
+        { label: "DHT22", description: "单总线，精度 ±0.5°C，同时测温湿度，价格稍高" }
+      ],
+      multiSelect: false
+    },
+    {
+      question: "蜂鸣器用哪种类型？",
+      header: "蜂鸣器",
+      options: [
+        { label: "有源蜂鸣器", description: "GPIO 直接驱动，高低电平控制响停" },
+        { label: "无源蜂鸣器", description: "需要 PWM 驱动，可控制音调和频率" }
+      ],
+      multiSelect: false
+    },
+    {
+      question: "供电方案选哪种？",
+      header: "供电",
+      options: [
+        { label: "USB 5V", description: "通过 AMS1117-3.3 降压，适合桌面调试" },
+        { label: "电池供电", description: "3.7V 锂电池 + LDO，适合便携场景" },
+        { label: "DC 12V", description: "适合工业场景，需降压模块" }
+      ],
+      multiSelect: false
+    }
+  ]
+})
+```
+
+**关键原则：**
+- 选项标签用具体型号（DS18B20、DHT11），不用抽象描述
+- description 写关键差异（精度、接口、价格、驱动方式）
+- 影响后续硬件选型的问题才问，不问纯偏好类问题
+- 如果某问题有明显最优解，可只提供 2 个选项（最优 + 备选）
+
+**等待用户选择后继续。**
 
 ### Step 4: 第 3 轮 — 生成需求文档
 
