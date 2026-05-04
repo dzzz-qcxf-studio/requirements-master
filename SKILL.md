@@ -1,18 +1,17 @@
 ---
 name: requirements-master
-description: 嵌入式项目需求工程师 — 通过 AI 推理 + 用户确认，将模糊的项目想法转化为结构化需求文档（requirements.json）
+description: 需求分析专用 skill — 由 embedded-pipeline 调用，不直接触发。通过 AI 推理 + 用户确认，将项目想法转化为结构化需求文档（requirements.json）
 ---
 
 # Requirements Master
 
-当用户描述嵌入式项目需求时，通过 3 轮内部推理 + 用户确认，生成结构化的需求文档。
+通过 3 轮内部推理 + 用户确认，生成结构化的需求文档。
 
 ## 触发条件
 
-用户描述嵌入式项目需求时触发，例如：
-- "我要用STM32做一个温度报警器"
-- "帮我分析一下声控开灯的方案"
-- "做一个智能浇花系统"
+**本 skill 由 `embedded-pipeline` 通过 `Skill('requirements-master')` 调用，不要直接触发。**
+
+当用户描述嵌入式项目需求时，应由 `embedded-pipeline` 作为入口统一调度。
 
 ## 执行协议（Claude 必须严格按此执行）
 
@@ -186,6 +185,14 @@ const { requirements, paths } = await generateRequirements(
 - `prompt.js` — prompt 模板（3 个 prompt 生成函数 + formatModules）
 - `parser.js` — 输出解析器（3 个解析函数，支持多种格式变体）
 
-## 工作流链
+## 工作流链（强制指令）
 
-完成后交给 diagram-master 生成图表。
+**完成本 skill 后，你必须立即执行以下操作，不得跳过：**
+
+```
+Skill('diagram-master')
+```
+
+这是管道的第二步。requirements-master 产出 requirements.json 后，diagram-master 会自动生成接线图编辑器、流程图和软件设计文档。
+
+**禁止**：完成需求分析后直接写代码、跳过图表生成阶段。
